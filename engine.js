@@ -103,3 +103,8 @@ console.log("Token stream generated:", this.token_stream);
 return this.token_stream;
 }
 }
+
+
+
+export class ProgramNode { constructor(){ this.body = []; this.type = 'Program'; } }
+export class ActAsNode { constructor(id){ this.id = id; this.type = 'ActAs'; } }
