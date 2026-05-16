@@ -111,3 +111,5 @@ export class ActAsNode { constructor(id){ this.id = id; this.type = 'ActAs'; } }
 export class VarDeclNode { constructor(id, val){ this.id = id; this.val = val; this.type = 'VarDecl'; } }
 export class OutputNode { constructor(expr){ this.expr = expr; this.type = 'Output'; } }
 export class HallucinationNode { constructor(id){ this.id = id; this.type = 'Hallucination'; } }
+export class IfNode { constructor(cond, body, alt){ this.cond = cond; this.body = body; this.alt = alt; this.type = 'If'; } }
+export class ThinkNode { constructor(){ this.type = 'Think'; } }
