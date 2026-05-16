@@ -132,3 +132,6 @@ export class Parser {
 peek() {return this.tokens[this.pos]; }
 advance() { this.pos++; }
 }
+
+
+Parser.prototype.parse = function() { let p = new ProgramNode(); while(this.peek().type !== "EOF") { p.body.push(this.parseStatement()); } return p; };
