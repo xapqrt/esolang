@@ -135,3 +135,9 @@ advance() { this.pos++; }
 
 
 Parser.prototype.parse = function() { let p = new ProgramNode(); while(this.peek().type !== "EOF") { p.body.push(this.parseStatement()); } return p; };
+Parser.prototype.parseStatement = function() {
+    let t = this.peek();
+    if (t.type === "ACT_AS") { this.advance(); let id = this.advance().value; return new ActAsNode(id); }
+    if (t.type === "THINK_STEP_BY_STEP") { this.advance(); return new ThinkNode(); }
+ return this.parseVarOrOut();
+};
