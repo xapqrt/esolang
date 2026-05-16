@@ -141,3 +141,9 @@ Parser.prototype.parseStatement = function() {
     if (t.type === "THINK_STEP_BY_STEP") { this.advance(); return new ThinkNode(); }
  return this.parseVarOrOut();
 };
+Parser.prototype.parseVarOrOut = function() {
+    let t = this.peek();
+    if (t.type === "TAKE_INPUT") { this.advance(); let id = this.advance().value; this.advance(); let val = this.parseExpression(); return new VarDeclNode(id, val); }
+    if (t.type === "OUTPUT") { this.advance(); let expr = this.parseExpression(); return new OutputNode(expr); }
+    return this.parseExpression();
+};
