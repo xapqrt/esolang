@@ -108,3 +108,4 @@ return this.token_stream;
 
 export class ProgramNode { constructor(){ this.body = []; this.type = 'Program'; } }
 export class ActAsNode { constructor(id){ this.id = id; this.type = 'ActAs'; } }
+export class VarDeclNode { constructor(id, val){ this.id = id; this.val = val; this.type = 'VarDecl'; } }
