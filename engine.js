@@ -115,3 +115,20 @@ export class IfNode { constructor(cond, body, alt){ this.cond = cond; this.body 
 export class ThinkNode { constructor(){ this.type = 'Think'; } }
 export class LiteralNode { constructor(val){ this.val= val; this.type = 'Literal'; } }
 export class IdentifierNode { constructor(name){ this.name = name; this.type = 'Identifier'; } }
+
+
+
+
+
+
+
+
+
+export class Parser {
+    constructor(tokens) {
+        this.tokens = tokens;
+        this.pos = 0;
+    }
+peek() {return this.tokens[this.pos]; }
+advance() { this.pos++; }
+}
