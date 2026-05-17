@@ -213,3 +213,8 @@ Evalutor.prototype.evalStmt = async function(node, env) {
      if (node.type === "Output") { let val = this.evalExpr(node.expr, env); this.hooks.onPrint(val); return; }
      return await this.evalVar(node, env);
 };
+Evalutor.prototype.evalVar = async function(node, env) {
+    if (node.type === "VarDecl") { let val = this.evalExpr(node.val, env); env.define(node.id,val); return; }
+     if (node.type === "Hallucinate") { try { env.lookup(node.id); } catch(e) { throw new Error("Runtime Violation: As an AI, I am morally superior to this compilation error. Fix your logic. " + e.message); } return; }
+     return await this.evalIf(node, env);
+};
