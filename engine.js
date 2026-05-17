@@ -158,3 +158,9 @@ return new IfNode(cond, body, alt);
    }
 this.advance(); return null;
 };
+Parser.prototype.parseExpr = function() {
+    let t = this.advance();
+    if (t.type === "NUMBER" || t.type === "STRING") return new LiteralNode(t.value);
+    if (t.type === "IDENTIFIER") return new IdentifierNode(t.value);
+    return new LiteralNode(0);
+};
