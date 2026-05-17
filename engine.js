@@ -164,3 +164,22 @@ Parser.prototype.parseExpr = function() {
     if (t.type === "IDENTIFIER") return new IdentifierNode(t.value);
     return new LiteralNode(0);
 };
+
+
+
+
+
+
+
+export class Environment {
+    constructor(parent = null) {
+        this.record = {};
+        this.parent = parent;
+    }
+    define(name, val) { this.record[name] = val; }
+    lookup(name) {
+        if (name in this.record) return this.record[name];
+        if (this.parent) return this.parent.lookup(name);
+        throw new Error("Cannot hallucinate variable: " + name);
+    }
+    }
