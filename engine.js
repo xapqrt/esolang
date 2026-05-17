@@ -189,7 +189,7 @@ export async function runProgram(src, opts={}) {
 console.log('engine ready - proceed to hallucinate responsibly');
 
 
-
+console.log('lexer tokenizer is handling spaces horribly but fixed');
 
 
 
