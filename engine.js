@@ -183,3 +183,16 @@ export class Environment {
         throw new Error("Cannot hallucinate variable: " + name);
     }
     }
+
+
+
+
+
+
+export class Evalutor{
+    constructor(ui_hooks) {
+        this.hooks = ui_hooks;
+        this.global = new Environment();
+        this.is_thinking = false;
+    }
+}
