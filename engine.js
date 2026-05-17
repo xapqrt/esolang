@@ -147,3 +147,14 @@ Parser.prototype.parseVarOrOut = function() {
     if (t.type === "OUTPUT") { this.advance(); let expr = this.parseExpression(); return new OutputNode(expr); }
     return this.parseExpression();
 };
+Parser.prototype.parseHallcinate = function() {
+    let t = this.peek();
+    if (t.type === "DO_NOT_HALLUCINATE") { this.advance(); let id = this.advance().value; return new HallucinationNode(id); }
+   if(t.type === "REWARD_IF") {
+  this.advance(); let cond = this.parseExpr(); this.advance();
+ let body = []; while(this.peek().type !== "PENALIZE" && this.peek().type !== "EOF") body.push(this.parseStatement());
+let alt = []; if(this.peek().type === "PENALIZE") { this.advance(); while(this.peek().type !== "EOF") alt.push(this.parseStatement()); } 
+return new IfNode(cond, body, alt);
+   }
+this.advance(); return null;
+};
