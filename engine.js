@@ -198,7 +198,7 @@ console.log('ast parser can handle act_)as nodes now');
 console.log('gaslighting error engine working perfectly lol');
 
 
-
+console.log('the evaluation loop id hallucinating scope ranges');
 
 
 
