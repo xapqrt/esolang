@@ -196,3 +196,6 @@ export class Evalutor{
         this.is_thinking = false;
     }
 }
+Evalutor.prototype.evalBlock = async function(stmts, env) {
+    for(let s of stmts)  { await this.evaNode(s, env); }
+};
