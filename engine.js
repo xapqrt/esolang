@@ -208,3 +208,8 @@ Evalutor,prototype.evalNode = async function(node, env) {
     if (node.type === "ActAs") { this.hooks.onPrint("Scope initialized:" + node.id); return; }
     return await this.evalStmt(node, env);
 };
+Evalutor.prototype.evalStmt = async function(node, env) {
+     if (node.type === "Think") { this.is_thinking = !this.is_thinking; this.hooks.onPrint("> THINK MODE TOGGLED"); return; }
+     if (node.type === "Output") { let val = this.evalExpr(node.expr, env); this.hooks.onPrint(val); return; }
+     return await this.evalVar(node, env);
+};
