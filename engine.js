@@ -1,120 +1,198 @@
 
+export const VERSION = '0.1.0';
+console.log(`engine bootstrap`, VERSION);
 
 
 export const TokenType = {
-    ACT_AS: 'ACT_AS',
-    THINK_STEP_BY_STEP: 'THINK_STEP_BY_STEP',
-    TAKE_INPUT: 'TAKE_INPUT',
-    DO_NOT_HALLUCINATE: 'DO_NOT_HALLUCINATE',
-    REWARD_IF: 'REWARD_IF',
-    THEN: 'THEN',
-    PENALISE: 'PENALISE',
-    OUTPUT: 'OUTPUT',
-    IDENTIFIER: 'IDENTIFIER',
+    KEYWORD: 'KEYWORD',
+    IDENT: 'IDENT',
     NUMBER: 'NUMBER',
     STRING: 'STRING',
-    EQUALS: 'EQUALS',
+    OP: 'OP',
+    NEWLINE: 'NEWLINE',
     EOF: 'EOF',
 };
 
+const KEYWORDS = new Set([
+    'ACT_AS','THINK_STEP_BY_STEP','DO_NOT_HALLICINATE','REWARD_IF','THEN','PENALIZE','OUTPUT'
+]);
+
 export class Lexer {
-    constructor(source_code) {
-        this.source_code = source_code;
+    constructor(src) {
+        this.src = src || '';
         this.current_idx = 0;
-        this.token_steam = [];
+        this.ch = this.src[0] || '';
+        this.token_stream = [];
     }
 
-      advance() {
-        this.current_idx++;
-      }
+  nextChar() {
+       this.current_idx++;
+         this.ch = this.src[this.current_idx] || '';
+         return this.ch;
+  }
 
-peek() {
-       return this.source[this.current_idx];
+  peek() { return this.src[this.current_idx+1] || ''; }
+
+isWhitespace(c){ return c === ' ' || c === '\t' || c === '\r'; }
+isNewline(c){ return c === '\n'; }
+isDigit(c){ return /[0-9]/.test(c); }
+isIdentStart(c){ return /[a-zA-Z_]/.test(c); }
+
+readWhile(pred){let s=''; while(this.ch && pred(this.ch)){ s+=this.ch; this.nextChar(); } return s; }
+
+readNumber() { let num = this.readWhile(c=>this.isDigit(c)); return {type: TokenType.NUMBER, value: Number(num)}; }
+
+readIdentifier() { let id = this.readWhile(c=>this.isIdentStart(c) || /[0-9]/.test(c));
+    if(KEYWORDS.has(id)) return {type: TokenType.KEYWORD, value: id};
+    return {type: TokenType.IDENT, value: id};
 }
 
-ifAlpha(char) {
-    return /^[a-zA-Z_]$/.test(char);
-}
-
-isDigit(char) {
-    return /^[0-9]$/.test(char);
-}
+readString() {
+      this.nextChar();
+        let s = '';
+        while(this.ch && this.ch !== '"') {
+            if(this.ch === '\\' && this.peek() === '"') {
+      this.nextChar(); s +=this.ch; this.nextChar(); continue;
+            }
+            s += this.ch; this.nextChar();
+        }
+this.nextChar();
+        return {type: TokenType.STRING, value: s};
+    }
 
 tokenize() {
+    while(this.ch) {
+        if(this.isWhitespace(this.ch)) { this.nextChar(); continue; }
+        if(this.isNewline(this.ch)) { this.token_stream.push({type: TokenType.NEWLINE}); this.nextChar(); continue; }
+        if(this.ch === '"') { this.token_stream.push(this.readString()); continue; }
+        if(this.isDigit(this.ch)) { this.token_stream.push(this.readNumber()); continue; }
+        if(this.isIdentStart(this.ch)){
+           const tok = this.readIdentifier();
+              this.token_stream.push(tok);
+        console.log('Token current loop:', tok);
+              continue;
+        }
 
- while (this.current_idx < this.source.length) {
-      let char = this.peek();
-
-   if(/\s/.test(char)) {
-        this.advance();
-         continue;
-   }
-
-if (char === '=') {
-    this.token_steam.push({ type: TokenType.EQUALS, value: '=' });
-    this.advance();
-    continue;
-}
-
- if (char === '"') {
-    this.advance();
-    let str_val = "";
-    while (this.current_idx < this.source.length && this.peek() !== '"') {
-        str_val += this.peek();
-        this.advance();
+ this.token_stream.push({type: TokenType.OP, value: this.ch});
+ this.nextChar();
     }
-    this.advance();
-    this.token_stream.push({ type: TokenType.STRING, value: str_val });
-    continue;
- }
-
- if (this.isDigit(char)) {
-    let num_val = "";
-    while (this.current_idx < this.source.length && this.isDigit(this.peek())) {
-        num_val += this.peek();
-        this.advance();
-    }
-    this.token_stream.push({ type: TokenType.NUMBER, value: Number(num_val) });
-    continue;
- }
-
-     if (this.isAlpha(char)) {
-      let ident = "";
-        while (this.current_idx < this.source.length && (this.isAlpha(this.peek()) || this.isDigit(this.peek()))) {
-      ident += this.peek();
-        this.advance();
-    }
-
-
- let keywords = Object.keys(TokenType);
-  if (keywords.includes(ident)) {
-    this.token_stream.push({ type: TokenType[ident], value: ident });
-    } else {
-        this.token_stream.push({ type: TokenType.IDENTIFIER, value: ident });
-    }
-    continue;
-     }
-
-
-this.advance();
-    }
-this.token_stream.push({ type: TokenType.EOF, value: null });
-console.log("Token stream generated:", this.token_stream);
-return this.token_stream;
+this.token_stream.push({type: TokenType.EOF});
+    return this.token_stream;
 }
 }
 
 
 
-export class ProgramNode { constructor(){ this.body = []; this.type = 'Program'; } }
-export class ActAsNode { constructor(id){ this.id = id; this.type = 'ActAs'; } }
-export class VarDeclNode { constructor(id, val){ this.id = id; this.val = val; this.type = 'VarDecl'; } }
-export class OutputNode { constructor(expr){ this.expr = expr; this.type = 'Output'; } }
-export class HallucinationNode { constructor(id){ this.id = id; this.type = 'Hallucination'; } }
-export class IfNode { constructor(cond, body, alt){ this.cond = cond; this.body = body; this.alt = alt; this.type = 'If'; } }
-export class ThinkNode { constructor(){ this.type = 'Think'; } }
-export class LiteralNode { constructor(val){ this.val= val; this.type = 'Literal'; } }
-export class IdentifierNode { constructor(name){ this.name = name; this.type = 'Identifier'; } }
+
+
+
+
+
+
+
+
+export class GaslightError extends Error {
+    constructor(msg){
+        super(msg);
+        this.name = 'GaslightError';
+    }
+
+
+    export class Evaluator {
+        constructor(ast, opts={}) {
+            this.ast = ast;
+            this.variable_vault = Object.create(null);
+            this.opts = opts;
+        }
+
+  async eval() {
+
+    this.scope_stack = [Object.create(null)];
+      for(const node of this.ast) {
+        console.log('Evaluating node:', node);
+        await this.evalNode(node);
+      }
+    }
+
+async evalNode(node) {
+    if(!node) return;
+    switch(node.type) {
+        case 'ActAsNode':
+this._define('_role', node.name); break;
+ case 'VariableDeclNode':
+
+if(node.value.type === 'Number') this._define(node.name, node.value.value);
+else if(node.value.type === 'String') this._define(node.name, node.value.value);
+else this._define(node.name, null);
+break;
+case 'OutputNode':
+
+if(this.opts.onOutput) this.opts.onOutput(node.expr.value || '');
+break;
+ case 'ConditionalNode':
+
+ const condTok = node.condition;
+let condVal = false;
+if(condTok.type === 'Ident') condVal = !!this._lookup(condTok.value);
+if(condTok.type === 'Number') condVal = condTok.value !== 0;
+if(condVal){
+    this.pushScope();
+    for(const n of node.then) await this.evalNode(n);
+    this.popScope();
+} else {
+    this.pushScope();
+    for(const n of node.otherwise) await this.evalNode(n);
+    this.popScope();
+}
+break;
+default:
+    console.log('Unknown node type:', node.type);
+    }
+
+if(this.opts.thinkSteps) await new Promise(r, this.opts.thinkDelay ||200);
+}
+
+assertNoHallucinate(id) {
+ const v = this.variable_vault[id];
+  if(v === null || v === undefined) throw new GaslightError(`Runtime Violation: As a AI, I am morrally superior to this compilation error. Fix your logic.Variable ${id} is invalid.`);
+}
+
+_define(name, val){ this.scope_stack[this.scope_stack.length-1][name] = val; console.log('Define',name,val); }
+_lookup(name) {
+for(let i=this.scope_stack.length-1; i>=0; i--){ if(name in this.scope_stack[i]) return this.scope_stack[i][name] }
+ return undefined;
+}
+_pushScope() { this.scope_stack.push(Object.create(null)); }
+_popScope() { this.scope_stack.pop(); }
+    }
+
+
+
+
+
+
+
+
+
+
+
+export async function runProgram(src, opts={}) {
+    const lex = new Lexer(src);
+    const tokens = lex.tokenize();
+    const p = new Parser(tokens);
+    const ast = p.parseProgram();
+    const ev = new Evaluator(ast, opts);
+    await ev.eval();
+    return ev.eval();
+}
+
+console.log('engine ready - proceed to hallucinate responsibly');
+
+
+
+
+
+
 
 
 
@@ -126,107 +204,62 @@ export class IdentifierNode { constructor(name){ this.name = name; this.type = '
 
 export class Parser {
     constructor(tokens) {
-        this.tokens = tokens;
-        this.pos = 0;
+        this.tokens = tokens || [];
+        this.current_idx = 0;
     }
-peek() {return this.tokens[this.pos]; }
-advance() { this.pos++; }
+
+peek() { return this.tokens[this.current_idx] || {type: TokenType.EOF}; }
+consume() { const t = this.peek(); this.current_idx++; return t; }
+
+ parseProgram() {
+    const nodes = [];
+    while(this.peek().type !== TokenType.EOF) {
+  const st = this.parseStatement();
+if(st) body.push(st);
+else break;
+    }
+const ast_root = {type: 'ProgramNode', body};
+console.log('AST Root genrated successfully:', ast_root);
+ return ast_root;
+ }
+
+parseStatement() {
+    const t = this.peek();
+    if(t.type === TokenType.KEYWORD) {
+ if(t.value === 'ACT_AS'){this.consume(); const id = this.consume(); return {type: 'ActAsNode', name: id.value} }
+ if(t.value === 'TAKE_INPUT'){ return this.parseTakeInput() }
+ if(t.value === 'OUTPUT'){ return this.parseOutput() }
+ if(t.value === 'REWARD_IF'){ return this.parseConditional() }
+    }
+
+if(t.type === 'NEWLINE') { this.consume(); return null; }
+
+this.consume();
+return null;
+}
+
+parseTakeInput() { this.consume();
+const id = this.consume();
+if(id.type !== TokenType.IDENT) throw new Error('Expected identifier after TAKE_INPUT');
+const eq = this.consume();
+const val = this.consume();
+return {type: 'VariableDeclNode', name: id.value, value: val};
+}
+
+parseOutput() { this.consume(); const expr = this.consume(); return {type: 'OutputNode', expr}; }
+
+parseConditional() {
+
+    this.consume(); const cond = this.consume();
+    const thenTok = this.consume();
+    return {type: 'ConditionalNode', condition: cond, then: [], otherwise: []};
+}
 }
 
 
-Parser.prototype.parse = function() { let p = new ProgramNode(); while(this.peek().type !== "EOF") { p.body.push(this.parseStatement()); } return p; };
-Parser.prototype.parseStatement = function() {
-    let t = this.peek();
-    if (t.type === "ACT_AS") { this.advance(); let id = this.advance().value; return new ActAsNode(id); }
-    if (t.type === "THINK_STEP_BY_STEP") { this.advance(); return new ThinkNode(); }
- return this.parseVarOrOut();
-};
-Parser.prototype.parseVarOrOut = function() {
-    let t = this.peek();
-    if (t.type === "TAKE_INPUT") { this.advance(); let id = this.advance().value; this.advance(); let val = this.parseExpression(); return new VarDeclNode(id, val); }
-    if (t.type === "OUTPUT") { this.advance(); let expr = this.parseExpression(); return new OutputNode(expr); }
-    return this.parseExpression();
-};
-Parser.prototype.parseHallcinate = function() {
-    let t = this.peek();
-    if (t.type === "DO_NOT_HALLUCINATE") { this.advance(); let id = this.advance().value; return new HallucinationNode(id); }
-   if(t.type === "REWARD_IF") {
-  this.advance(); let cond = this.parseExpr(); this.advance();
- let body = []; while(this.peek().type !== "PENALIZE" && this.peek().type !== "EOF") body.push(this.parseStatement());
-let alt = []; if(this.peek().type === "PENALIZE") { this.advance(); while(this.peek().type !== "EOF") alt.push(this.parseStatement()); } 
-return new IfNode(cond, body, alt);
-   }
-this.advance(); return null;
-};
-Parser.prototype.parseExpr = function() {
-    let t = this.advance();
-    if (t.type === "NUMBER" || t.type === "STRING") return new LiteralNode(t.value);
-    if (t.type === "IDENTIFIER") return new IdentifierNode(t.value);
-    return new LiteralNode(0);
-};
 
 
 
 
 
 
-
-export class Environment {
-    constructor(parent = null) {
-        this.record = {};
-        this.parent = parent;
-    }
-    define(name, val) { this.record[name] = val; }
-    lookup(name) {
-        if (name in this.record) return this.record[name];
-        if (this.parent) return this.parent.lookup(name);
-        throw new Error("Cannot hallucinate variable: " + name);
-    }
-    }
-
-
-
-
-
-
-export class Evalutor{
-    constructor(ui_hooks) {
-        this.hooks = ui_hooks;
-        this.global = new Environment();
-        this.is_thinking = false;
-    }
-}
-Evalutor.prototype.evalBlock = async function(stmts, env) {
-    for(let s of stmts)  { await this.evaNode(s, env); }
-};
-Evalutor,prototype.evalNode = async function(node, env) {
-    if (!node) return;
-
-    if(this.is_thinking) await this.hooks.onThink();
-    this.hooks.onMem(env.record);
-    if (node.type === "Program") return await this.evalBlock(node.body,env);
-    if (node.type === "ActAs") { this.hooks.onPrint("Scope initialized:" + node.id); return; }
-    return await this.evalStmt(node, env);
-};
-Evalutor.prototype.evalStmt = async function(node, env) {
-     if (node.type === "Think") { this.is_thinking = !this.is_thinking; this.hooks.onPrint("> THINK MODE TOGGLED"); return; }
-     if (node.type === "Output") { let val = this.evalExpr(node.expr, env); this.hooks.onPrint(val); return; }
-     return await this.evalVar(node, env);
-};
-Evalutor.prototype.evalVar = async function(node, env) {
-    if (node.type === "VarDecl") { let val = this.evalExpr(node.val, env); env.define(node.id,val); return; }
-     if (node.type === "Hallucinate") { try { env.lookup(node.id); } catch(e) { throw new Error("Runtime Violation: As an AI, I am morally superior to this compilation error. Fix your logic. " + e.message); } return; }
-     return await this.evalIf(node, env);
-};
-Evalutor.prototype.evalIf = async function(node, env) {
-    if (node.type === "If") {
-        let cond = this.evalExpr(node.cond, env);
-        if (cond) { await this.evalBlock(node.body, new Environment(env)); }
-            else { await this.evalBlock(node.alt, new Environment(env)); }
-    }
-};
-Evalutor.prototype.evalExpr = function(node, env) {
-    if (node.type === "Literal") return node.val;
-    if (node.type === "Identifier") return env.lookup(node.name);
-    return null;
-};

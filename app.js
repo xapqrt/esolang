@@ -1,38 +1,48 @@
-import { Lexer } from './engine.js';
+import { Lexer, Parser, Evaluator } from './engine.js';
 
-document.addEventListener('DOMContentLoaded', () => {
-    const runBtn = document.getElementById('run-btn');
-    const codeEditor = document.getElementById('code-editor');
-    const consoleOutput = document.getElementById('console-output');
+const runBth = document.getElementById('run-btn');
+const editor = document.getElementById('editor');
+const consoleOut = document.getElementById('consoleOut');
+const visualBrain = document.getElementById('visualBrain');
+const stepToggle = document.getElementById('stepToggle');
 
-    runBtn.addEventListener("click", () => {
-        const source_code = codeEditor.value;
-        consoleOutput.innerHTML = "<span class='gaslight-error'>Lexer starting...</span><br>";
+function appendConsole(msg) {
+    const el = document.createElement('div'); el.textContent = msg; consoleOut.appendChild(el); consoleOut.scrollTop = consoleOut.scrollHeight;
+}
 
-        try {
-            const lexer = new Lexer(source_code);
-            const tokens = lexer.tokenize();
-            const parser = new Parser(tokens);
-                const ast = parser.parse();
-             consoleOutput.innerHTML +=  `[x] AST Compiled.<br>`;
-      
-            const evaHooks = {
-                    onPrint: (msg) => { consoleOutput.innerHTML += `> ${msg}<br>`; consoleOutput.scrollTo(0, consoleOutput.scrollHeight); },                                                                                                            
-            onMem: (mem) => { document.getElementById("memory-map").innerHTML = JSON.stringify(mem, null, 2).replace(/\n/g, "<br>").replace(/ /g, "&nbsp;"); },
-               onThink: async() => new Promise(r => setTimeout(r, 600))
-                };
+function renderVisual(vault) {
+    visualBrain.innerHTML = '';
+    for(const k of Object.keys(vault)) {
+   const v = vault[k];
+        const kid = document.createElement('div');
+        kid.className = 'var-row';
+        kid.innerHTML = `<b>${k}</b>: <span>${String(v)}</span>`;
+        visualBrain.appendChild(kid);
+    }
+   }     
 
-            const evaluator = new Evaluator(evaHooks);
-            await evaluator.evalNode(ast, evaluator.global);
-            consoleOutput.innerHTML += `<span style='color: #0f0'>Program exited gracefully.</span><br>`;
-            } catch (e) {
-             consoleOutput.innerHTML += `<span class='gaslight-error'>${e.message}</span><br>`;
+   runBtn.addEventListener('click', async ()=>{
+    consoleOut.innerHTML = '';
+    visualBrain.innerHTML = '';
+    const src = editor.value;
+    try{
+        const lex = new Lexer(src);
+        const tokens = lex.tokenize();
+        const p = new Parser(tokens);
+        const ast = p.parseProgram();
+        const ev = new Evaluator(ast, {thinkStep: stepToggle.checked, thinkDelay:200, onOutput:(m)=>appendConsole(m)});
+        // hook to update visual brain after each node — ugly but works
+        ev._originalEvalNode = ev.evalNode.bind(ev);
+        ev.evalNode = async function(node){
+            await ev._originalEvalNode(node);
+            renderVisual(ev.scope_stack ? ev.scope_stack[ev.scope_stack.length-1] : ev.variable_vault);
         }
+        await ev.eval();
+        appendConsole('-- Program Finished --');
+    } catch(e) {
+        appendConsole(e.name+': '+e.message);
+    }
     });
-});
-import { Parser, Evaluator } from './engine.js';
 
 
-
-
-
+    editor.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === 'Enter'){ runBtn.click(); } });
