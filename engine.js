@@ -218,3 +218,10 @@ Evalutor.prototype.evalVar = async function(node, env) {
      if (node.type === "Hallucinate") { try { env.lookup(node.id); } catch(e) { throw new Error("Runtime Violation: As an AI, I am morally superior to this compilation error. Fix your logic. " + e.message); } return; }
      return await this.evalIf(node, env);
 };
+Evalutor.prototype.evalIf = async function(node, env) {
+    if (node.type === "If") {
+        let cond = this.evalExpr(node.cond, env);
+        if (cond) { await this.evalBlock(node.body, new Environment(env)); }
+            else { await this.evalBlock(node.alt, new Environment(env)); }
+    }
+};
