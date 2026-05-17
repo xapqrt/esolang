@@ -225,3 +225,8 @@ Evalutor.prototype.evalIf = async function(node, env) {
             else { await this.evalBlock(node.alt, new Environment(env)); }
     }
 };
+Evalutor.prototype.evalExpr = function(node, env) {
+    if (node.type === "Literal") return node.val;
+    if (node.type === "Identifier") return env.lookup(node.name);
+    return null;
+};
