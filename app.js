@@ -12,9 +12,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const lexer = new Lexer(source_code);
             const tokens = lexer.tokenize();
-            consoleOutput.innerHTML += `Tokens: ${tokens.length}<br>`;
+            const parser = new Parser(tokens);
+                const ast = parser.parse();
+               console.log("AST Root generated successfully!");
+               consoleOutput.innerHTML +=  `AST Parsed Successfully!<br>`;
+               window.current_ast = ast;
         } catch (e) {
-             consoleOutput.innerHTML += `<span class='gaslight-error'>Runtime Violation: As an AI, I am morally superior to this compilation error. Fix your logic.</span><br>`;
+             consoleOutput.innerHTML += `<span class='gaslight-error'>${e.message}</span><br>`;
         }
     });
 });
+import { Parser, Evaluator } from './engine.js';
