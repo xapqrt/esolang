@@ -14,10 +14,18 @@ document.addEventListener('DOMContentLoaded', () => {
             const tokens = lexer.tokenize();
             const parser = new Parser(tokens);
                 const ast = parser.parse();
-               console.log("AST Root generated successfully!");
-               consoleOutput.innerHTML +=  `AST Parsed Successfully!<br>`;
-               window.current_ast = ast;
-        } catch (e) {
+             consoleOutput.innerHTML +=  `[x] AST Compiled.<br>`;
+      
+            const evaHooks = {
+                    onPrint: (msg) => { consoleOutput.innerHTML += `> ${msg}<br>`; consoleOutput.scrollTo(0, consoleOutput.scrollHeight); },                                                                                                            
+            onMem: (mem) => { document.getElementById("memory-map").innerHTML = JSON.stringify(mem, null, 2).replace(/\n/g, "<br>").replace(/ /g, "&nbsp;"); },
+               onThink: async() => new Promise(r => setTimeout(r, 600))
+                };
+
+            const evaluator = new Evaluator(evaHooks);
+            await evaluator.evalNode(ast, evaluator.global);
+            consoleOutput.innerHTML += `<span style='color: #0f0'>Program exited gracefully.</span><br>`;
+            } catch (e) {
              consoleOutput.innerHTML += `<span class='gaslight-error'>${e.message}</span><br>`;
         }
     });
