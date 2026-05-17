@@ -46,3 +46,7 @@ function renderVisual(vault) {
 
 
     editor.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === 'Enter'){ runBtn.click(); } });
+
+
+    console.log('ui rendering stack frames live, let's go");
+        
