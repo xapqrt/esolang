@@ -199,3 +199,12 @@ export class Evalutor{
 Evalutor.prototype.evalBlock = async function(stmts, env) {
     for(let s of stmts)  { await this.evaNode(s, env); }
 };
+Evalutor,prototype.evalNode = async function(node, env) {
+    if (!node) return;
+
+    if(this.is_thinking) await this.hooks.onThink();
+    this.hooks.onMem(env.record);
+    if (node.type === "Program") return await this.evalBlock(node.body,env);
+    if (node.type === "ActAs") { this.hooks.onPrint("Scope initialized:" + node.id); return; }
+    return await this.evalStmt(node, env);
+};
