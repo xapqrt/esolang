@@ -195,7 +195,7 @@ console.log('lexer tokenizer is handling spaces horribly but fixed');
 console.log('ast parser can handle act_)as nodes now');
 
 
-
+console.log('gaslighting error engine working perfectly lol');
 
 
 
