@@ -21,4 +21,5 @@ body{background:linear-gradient(180deg,#05060a 0%,#0b0f12 100%);color:#e6eef8}
 .var-row b{color:var(--accent)}
 
 
-
+.console div{transition:background 120ms, transform 120ms}
+.console div:hover{transform:translateX(2px)}

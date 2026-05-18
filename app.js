@@ -7,6 +7,7 @@ const resetBtn = document.getElementById('resetBtn');
 const saveBtn = document.getElementById('saveBtn');
 const loadBtn = document.getElementById('loadBtn');
 const samples = document.getElementById('samples');
+const clearConsoleBtn = document.getElementById('clearConsoleBtn');
 const editor = document.getElementById('editor');
 const consoleOut = document.getElementById('consoleOut');
 const visualBrain = document.getElementById('visualBrain');
@@ -43,6 +44,8 @@ function renderVisual(vault) {
    if(v === 'demo1') editor.value = `ACT_AS Demo\nTAKE_INPUT a = 5\nTAKE_INPUT b = 7\nOUTPUT "sum is:"\nOUTPUT a + b\n`;
    if(v === 'demo2') editor.value = `ACT_AS Checker\nTAKE_INPUT x = 0\nREWARD_IF x == 0 THEN\n  OUTPUT "x is zero"\nPENALIZE\n  OUTPUT "x is not zero"\nDO_NOT_HALLUCINATE x\n`;
    });
+   
+   clearConsoleBtn.addEventListener('click', ()=>{ consoleOut.innerHTML = ''; appendConsole('-- console cleared --'); });
    
    runBtn.addEventListener('click', async ()=>{
     consoleOut.innerHTML = '';
