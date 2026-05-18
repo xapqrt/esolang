@@ -13,8 +13,28 @@ export const TokenType = {
     EOF: 'EOF',
 };
 
-const KEYWORDS = new Set([
-    'ACT_AS','THINK_STEP_BY_STEP','DO_NOT_HALLICINATE','REWARD_IF','THEN','PENALIZE','OUTPUT'
+
+export const kw = {
+    ACT_AS: 'ACT_AS',
+    THINK: 'THINK_STEP_BY_STEP',
+    TAKE_INPUT: 'TAKE_INPUT',
+    DO_NOT_HALLUCINATE: 'DO_NOT_HALLUCINATE',
+    REWARD_IF: 'REWARD_IF',
+    THEN: 'THEN',
+   PENALIZE: 'PENALIZE',
+    OUTPUT: 'OUTPUT',
+};
+
+
+const KEYWORDS = new Map([
+['ACT_AS', TokenType.KEYWORD],
+['THINK_STEP_BY_STEP', TokenType.KEYWORD],
+['TAKE_INPUT', TokenType.KEYWORD],
+['DO_NOT_HALLUCINATE', TokenType.KEYWORD],
+['REWARD_IF', TokenType.KEYWORD],
+['THEN', TokenType.KEYWORD],
+['PENALIZE', TokenType.KEYWORD],
+['OUTPUT', TokenType.KEYWORD],
 ]);
 
 export class Lexer {
