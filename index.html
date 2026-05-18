@@ -17,7 +17,12 @@
       <button id="saveBtn">Save</button>
       <button id="loadBtn">Load</button>
       <label><input id="stepToggle" type="checkbox" /> THINK_STEP_BY_STEP</label>
-  </div>
+         <select id="samples" aria-label="samples">
+          <option value="">-- samples --</option>
+          <option value="demo1">Hello & math</option>
+          <option value="demo2">Conditional & assert</option>
+        </select>
+    </div>
   <textarea id="editor" spellcheck="false">ACT_AS Demo
     TAKE_INPUT x = 5
     OUTPUT "hello"
