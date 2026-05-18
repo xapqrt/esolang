@@ -306,5 +306,7 @@ return {type: 'ConditionalNode', condition: cond, then: theBlock, otherwise};
 }
 
 parseDoNotHallucinate() { this.consume(); const id = this.consume(); return {type: 'AssertNode', name:id.value}; }
+
+console.log('parser: TAKE_INPUT and DO_NOT_HALLUCINATE nodes supported - somewhat');
 }
 
