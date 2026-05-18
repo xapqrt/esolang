@@ -152,10 +152,7 @@ if(this.opts.onOutput) this.opts.onOutput(String(outv));
 break;
  case 'ConditionalNode':
 
- const condTok = node.condition;
-let condVal = false;
-if(condTok.type === 'Ident') condVal = !!this._lookup(condTok.value);
-if(condTok.type === 'Number') condVal = condTok.value !== 0;
+const condVal =!!this.evalExpression(node.condition);
 if(condVal){
     this.pushScope();
     for(const n of node.then) await this.evalNode(n);
