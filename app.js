@@ -7,6 +7,12 @@ const resetBtn = document.getElementById('resetBtn');
 const saveBtn = document.getElementById('saveBtn');
 const loadBtn = document.getElementById('loadBtn');
 const samples = document.getElementById('samples');
+const snippetName = document.getElementById('snippetName');
+const saveSnippet = document.getElementById('saveSnippet');
+const workspaceSelect = document.getElementById('workspaceSelect');
+const deleteSnippet = document.getElementById('deleteSnippet');
+const highlighter = document.getElementById('highlighter');
+const gutter = document.getElementById('gutter');
 const clearConsoleBtn = document.getElementById('clearConsoleBtn');
 const editor = document.getElementById('editor');
 const consoleOut = document.getElementById('consoleOut');
@@ -88,5 +94,59 @@ function renderVisual(vault) {
 
     editor.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === 'Enter'){ runBtn.click(); } });
 
+
+  function updateGutter(){
+     const lines = editor.value.split('\n').length;
+     let s = '';
+        for(let i=1; i<=lines; i++) s+=i+'\n';
+       gutter.textContent = s;
+  }
+  
+  function escapeHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') }
+  
+    function highlightCode(s){}  
+      let out = escapeHtml(s);
+  
+     out = out.replace(/"([^"\\]|\\.)*"/g, m=>`<span class="str">${m}</span>`);
+  
+    out = out.replace(/\b(\d+)\b/g, m=>`<span class="num">${m}</span>`);
+  
+  out = out.replace(/\b(ACT_AS|THINK_STEP_BY_STEP|TAKE_INPUT|DO_NOT_HALLUCINATE|REWARD_IF|THEN|PENALIZE|OUTPUT)\b/g, m=>`<span class="kw">${m}</span>`);
+  return out;
+}
+  
+ function syncHighlight(){ highlighter.innerHTML = highlightCode(editor.value); updateGutter(); } 
+  editor.addEventListener('input', syncHighlight);
+  editor.addEventListener('scroll', ()=>{ highlighter.scrollTop = editor.scrollTop; gutter.scrollTop = editor.scrollTop; });
+  syncHighlight();
+  
+  
+  function loadWorkspaceIndex(){
+  const raw = localStorage.getItem('prompt_workspace');
+  return raw ? JSON.parse(raw) : {};
+  }
+  
+  function saveWorkspaceIndex(idx){ localStorage.setItem('prompt_workspace', JSON.stringify(idx)); }
+  
+  function refreshWorkspaceList(){
+  const idx = loadWorkspaceIndex();
+  workspaceSelect.innerHTML = '<option value="">-- workspace --</option>';
+  for(const k of Object.keys(idx)) {
+  const o = document.createElement('option'); o.value = k; o.textContent = k; workspaceSelect.appendChild(o);
+  }
+}
+  
+ saveSnippet.addEventListener('click', ()=>{ 
+  const name = snippetName.value && snippetName.value.trim(); if(!name){ appendConsole('Provide a snippet name first'); return; }
+  const idx = loadWorkspaceIndex(); idx[name] = editor.value; saveWorkspaceIndex(idx); refreshWorkspaceSelect(); appendConsole('-- snippet saved --');
+ });
+  
+  workspaceSelect.addEventListener('change', ()=>{ const k = workspaceSelect.value; if(!k) return; const idx = loadWorkspaceIndex(); if(idx[k]){ editor.value = idx[k]; syncHighlight(); appendConsole('-- loaded snippet '+k+' --'); }});
+  
+  workspaceSelect.addEventListener('change', ()=>{ const k = workspaceSelect.value; if(!k) return; const idx = loadWorkspaceIndex(); if(idx[k]){ editor.value = idx[k]; syncHighlight(); appendConsole('-- loaded snippet '+k+' --'); }});
+  
+  refreshWorkspaceList();
+  
+  
 
     console.log("ui rendering stack frames live, let's go");

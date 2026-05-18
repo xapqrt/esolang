@@ -24,10 +24,19 @@
         </select>
         <button id="clearConsoleBtn">Clear Console</button>
       </div>
-  <textarea id="editor" spellcheck="false">ACT_AS Demo
-    TAKE_INPUT x = 5
-    OUTPUT "hello"
-    </textarea>
+       <div class="editor-wrap">
+       <input id="snippetName" placeholder="snippet name" style="min-width:120px;margin-left:8px" /> 
+        <button id="saveSnippet">Save Snippet</button>
+        <select id="workspaceSelect"><option value="">-- workspace --</option></select>
+        <button id="deleteSnippet">Delete</button>
+        <textarea id="editor" spellcheck="false">ACT_AS Demo
+         TAKE_INPUT x = 5
+          TAKE_INPUT b = 7
+         OUTPUT "hello"
+        </textarea>
+     <div class="gutter" id="gutter">1</div>
+    <pre class="highlighter" id="highlighter"></pre>
+   </div>
     </aside>
 
     <section class=""panel right">

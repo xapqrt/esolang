@@ -21,5 +21,15 @@ body{background:linear-gradient(180deg,#05060a 0%,#0b0f12 100%);color:#e6eef8}
 .var-row b{color:var(--accent)}
 
 
+.editor-wrap{position:relative;display:flex;align-items:flex-start;gap:8px}
+.editor-wrap textarea#editor{position:relative;z-index:5;background:transparent;color:transparent;caret-color:var(--accent);width:100%;min-height:220px;padding:12px;border:1px solid rgba(255,255,255,0.03);border-radius:6px;resize:none}
+.editor-wrap .highlighter{position:absolute;left:60px;top:12px;right:12px;bottom:12px;z-index:1;color:#cfe;pointer-events:none;white-space:pre-wrap;word-wrap:break-word;padding:0 12px}
+.editor-wrap .gutter{position:absolute;left:12px;top:12px;width:44px;z-index:3;color:var(--muted);text-align:right;padding-right:6px;font-size:13px}
+.highlighter .kw{color:#00ffd1;font-weight:700}
+.highlighter .str{color:#ffb86b}
+.highlighter .num{color:#89ddff}
+
+
+
 .console div{transition:background 120ms, transform 120ms}
 .console div:hover{transform:translateX(2px)}
