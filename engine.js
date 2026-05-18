@@ -283,7 +283,7 @@ consume() { const t = this.peek(); this.current_idx++; return t; }
     while(this.peek().type !== TokenType.EOF) {
   const st = this.parseStatement();
 if(st) body.push(st);
-else break;
+else continue;
     }
 const ast_root = {type: 'ProgramNode', body};
 console.log('AST Root genrated successfully:', ast_root);
