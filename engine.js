@@ -165,11 +165,18 @@ if(condVal){
     this.popScope();
 }
 break;
+case 'AssertNode':
+
+  try { this.assertNoHallucinate(node.name); }
+       catch(e) { throw e }
+break;
 default:
     console.log('Unknown node type:', node.type);
     }
 
-if(this.opts.thinkSteps) await new Promise(r, this.opts.thinkDelay ||200);
+if(this.opts.onStep) await this.opts.onStep(node);
+
+    if(this.opts.thinkSteps) await new Promise(r, this.opts.thinkDelay ||200);
 }
 
 assertNoHallucinate(id) {
