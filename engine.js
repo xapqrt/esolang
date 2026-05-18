@@ -341,6 +341,8 @@ let otherwiseBlock = [];
 if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') {
     this.consume();
     while(this.peek().type !== TokenType.EOF) {
+       
+       if(this.peek().type === TokenType.KEYWORD && ['ACT_AS','TAKE_INPUT','OUTPUT','REWARD_IF','DO_NOT_HALLUCINATE'].includes(this.peek().value)) break;
         const s = this.parseStatement(); if(s) otherwiseBlock.push(s); else continue;
     }
 }
