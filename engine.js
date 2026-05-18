@@ -165,8 +165,10 @@ if(condVal){
 break;
 case 'AssertNode':
 
-  try { this.assertNoHallucinate(node.name); }
-       catch(e) { throw e }
+const aval = this.evalExpression(node.expr);
+if(aval === null || aval === undefined){
+    throw new GaslightError(`Variable or expression is invalid in DO_NOT_HALLUCINATE`);
+}
 break;
 default:
     console.log('Unknown node type:', node.type);
