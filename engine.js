@@ -93,7 +93,14 @@ tokenize() {
               continue;
         }
 
- this.token_stream.push({type: TokenType.OP, value: this.ch});
+ 
+ const two = this.ch + this.peek();
+ if(['==','!=','<=','>=','&&','||'].includes(two)){
+ this.token_stream.push({type: TokenType.OP, value: two});
+ this.nextChar(); this.nextChar();
+ continue;
+ }
+        this.token_stream.push({type: TokenType.OP, value: this.ch});
  this.nextChar();
     }
 this.token_stream.push({type: TokenType.EOF});
