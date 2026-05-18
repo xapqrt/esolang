@@ -374,7 +374,11 @@ parseBinary(minPrec) {
     }
     return left;
 }
+}
+
+}
 
 console.log('parser: TAKE_INPUT and DO_NOT_HALLUCINATE nodes supported - somewhat');
-}
+
+
 
