@@ -284,17 +284,17 @@ parseTakeInput() { this.consume();
 const id = this.consume();
 if(id.type !== TokenType.IDENT) throw new Error('Expected identifier after TAKE_INPUT');
 const eq = this.consume();
-const val = this.consume();
-return {type: 'VariableDeclNode', name: id.value, value: val};
+const expr = this.parseExpression();
+return {type: 'VariableDeclNode', name: id.value, value: expr};
 }
 
-parseOutput() { this.consume(); const expr = this.consume(); return {type: 'OutputNode', expr}; }
+parseOutput() { this.consume(); const expr = this.parseExpression(); return {type: 'OutputNode', expr}; }
 
 parseConditional() {
 
 this.consume();
 
-const cond = this.consume();
+const cond = this.parseExpression();
 
 const thenTok = this.consume();
 if(!(thenTok.type === TokenType.KEYWORD && thenTok.value === 'THEN')) throw new Error('Expected THEN after REWARD_IF condition');
@@ -314,7 +314,40 @@ if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') {
 return {type: 'ConditionalNode', condition: cond, then: theBlock, otherwise};
 }
 
-parseDoNotHallucinate() { this.consume(); const id = this.consume(); return {type: 'AssertNode', name:id.value}; }
+parseDoNotHallucinate() { this.consume(); const expr = this.parseExpression(); return {type: 'AssertNode', expr: expr } }
+
+
+parseExpression() {
+   return this.parseBinary(0);
+}
+
+parsePrimary() {
+  const t = this.peek();
+if(t.type === TokenType.NUMBER){ this.consume(); return {type:'LiteralNode', value:t.value} }
+if(t.type === TokenType.STRING){ this.consume(); return {type:'LiteralNode', value:t.value} }
+if(t.type === TokenType.IDENT){ this.consume(); return {type:'IdentifierNode', name:t.value} }
+if(t.type === TokenType.OP && t.value === '('){ this.consume(); const e = this.parseExpression(); const c = this.consume(); return e }
+
+return this.consume();
+}
+
+parseBinary(minPrec) {
+    let left = this.parsePrimary();
+     const PRECEDENCE = {
+        '||':1,'&&':2,'==':3,'!=':3,'<':4,'>':4,'<=':4,'>=':4,'+':5,'-':5,'*':6,'/':6
+     };
+    while(true) {
+        const t = this.peek();
+        if(t.type !== TokenType.OP && t.type !== TokenType.KEYWORD) break;
+        const op = t.value;
+        const prec = PRECEDENCE[op];
+        if(prec === undefined || prec < minPrec) break;
+        this.consume();
+        let right = this.parseBinary(prec + 1);
+        left = {type: 'BinaryOpNode', operator: op, left, right};
+    }
+    return left;
+}
 
 console.log('parser: TAKE_INPUT and DO_NOT_HALLUCINATE nodes supported - somewhat');
 }
