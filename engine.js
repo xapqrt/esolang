@@ -341,7 +341,7 @@ let otherwiseBlock = [];
 if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') {
     this.consume();
     while(this.peek().type !== TokenType.EOF) {
-        const s = this.parseStatement(); if(s) otherwiseBlock.push(s);
+        const s = this.parseStatement(); if(s) otherwiseBlock.push(s); else continue;
     }
 }
 return {type: 'ConditionalNode', condition: cond, then: theBlock, otherwise};
