@@ -4,6 +4,8 @@ const runBth = document.getElementById('run-btn');
 const stepBtn = document.getElementById('stepBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
+const saveBtn = document.getElementById('saveBtn');
+const loadBtn = document.getElementById('loadBtn');
 const editor = document.getElementById('editor');
 const consoleOut = document.getElementById('consoleOut');
 const visualBrain = document.getElementById('visualBrain');
@@ -32,7 +34,8 @@ function renderVisual(vault) {
    stepBtn.addEventListener('click', ()=>{ controller.stepMode = true; if(controller.stepResolve) controller.stepResolve(); });
    pauseBtn.addEventListener('click', ()=>{ controller.paused = !controller.paused; pauseBtn.textContent = controller.paused ? 'Resume' : 'Pause'; });
    resetBtn.addEventListener('click', ()=>{ controller.abort = true; appendConsole('-- reset requested --'); });
-   
+   saveBtn.addEventListener('click', ()=>{ localStorage.setItem('prompt_editor_snippet', editor.value); appendConsole('-- saved snippet to localStorage --'); });
+   loadBtn.addEventListener('click', ()=>{ const v = localStorage.getItem('prompt_editor_snippet'); if(v) editor.value = v; appendConsole('-- loaded snippet --'); });
    runBtn.addEventListener('click', async ()=>{
     consoleOut.innerHTML = '';
     visualBrain.innerHTML = '';
