@@ -1,6 +1,9 @@
 import { Lexer, Parser, Evaluator } from './engine.js';
 
 const runBth = document.getElementById('run-btn');
+const stepBtn = document.getElementById('stepBtn');
+const pauseBtn = document.getElementById('pauseBtn');
+const resetBtn = document.getElementById('resetBtn');
 const editor = document.getElementById('editor');
 const consoleOut = document.getElementById('consoleOut');
 const visualBrain = document.getElementById('visualBrain');
@@ -21,6 +24,12 @@ function renderVisual(vault) {
     }
    }     
 
+   let controller = { stepResolve: null, stepMode: false, paused:false, abort:false };
+   
+   stepBtn.addEventListener('click', ()=>{ controller.stepMode = true; if(controller.stepResolve) controller.stepResolve(); });
+   pauseBtn.addEventListener('click', ()=>{ controller.paused = !controller.paused; pauseBtn.textContent = controller.paused ? 'Resume' : 'Pause'; });
+   resetBtn.addEventListener('click', ()=>{ controller.abort = true; appendConsole('-- reset requested --'); });
+   
    runBtn.addEventListener('click', async ()=>{
     consoleOut.innerHTML = '';
     visualBrain.innerHTML = '';
@@ -30,8 +39,19 @@ function renderVisual(vault) {
         const tokens = lex.tokenize();
         const p = new Parser(tokens);
         const ast = p.parseProgram();
-        const ev = new Evaluator(ast, {thinkStep: stepToggle.checked, thinkDelay:200, onOutput:(m)=>appendConsole(m)});
-        // hook to update visual brain after each node — ugly but works
+       controller = { stepResolve: null, stepMode:false, paused:false, abort:false };
+            const ev = new Evaluator(ast, {thinkStep: stepToggle.checked, thinkDelay:200, onOutput:(m)=>appendConsole(m), _abort: controller.abort, onStep: async (node)=>{
+      
+        appendConsole('> step: '+(node.type||'?'));
+                        renderVisual(ev.scope_stack ? ev.scope_stack[ev.scope_stack.length-1] : ev.variable_vault);
+                        if(controller.abort) throw new Error('Aborted');
+                        if(controller.stepMode){
+                            await new Promise(res=> controller.stepResolve = res);
+                            controller.stepResolve = null;
+                        }
+                        while(controller.paused) await new Promise(r=>setTimeout(r,100));
+                }});
+        
         ev._originalEvalNode = ev.evalNode.bind(ev);
         ev.evalNode = async function(node){
             await ev._originalEvalNode(node);
@@ -48,5 +68,4 @@ function renderVisual(vault) {
     editor.addEventListener('keydown', (e)=>{ if(e.ctrlKey && e.key === 'Enter'){ runBtn.click(); } });
 
 
-    console.log('ui rendering stack frames live, let's go");
-        
+    console.log("ui rendering stack frames live, let's go");

@@ -129,9 +129,11 @@ export class GaslightError extends Error {
 
     this.scope_stack = [Object.create(null)];
       for(const node of this.ast) {
+      if(this.opts && this.opts._abort) { console.log('evaluation aborted'); break; }
         console.log('Evaluating node:', node);
         await this.evalNode(node);
-      }
+    if(this.opts && this.opts._abort) { console.log('evaluation aborted'); break; }
+    }
     }
 
 async evalNode(node) {
