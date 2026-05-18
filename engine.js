@@ -222,6 +222,18 @@ console.log('the evaluation loop id hallucinating scope ranges');
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 export class Parser {
     constructor(tokens) {
         this.tokens = tokens || [];
@@ -250,7 +262,8 @@ parseStatement() {
  if(t.value === 'TAKE_INPUT'){ return this.parseTakeInput() }
  if(t.value === 'OUTPUT'){ return this.parseOutput() }
  if(t.value === 'REWARD_IF'){ return this.parseConditional() }
-    }
+if(t.value === 'DO_NOT_HALLUCINATE'){ return this.parseDoNotHallucinate() }
+}
 
 if(t.type === 'NEWLINE') { this.consume(); return null; }
 
@@ -270,16 +283,28 @@ parseOutput() { this.consume(); const expr = this.consume(); return {type: 'Outp
 
 parseConditional() {
 
-    this.consume(); const cond = this.consume();
-    const thenTok = this.consume();
-    return {type: 'ConditionalNode', condition: cond, then: [], otherwise: []};
+this.consume();
+
+const cond = this.consume();
+
+const thenTok = this.consume();
+if(!(thenTok.type === TokenType.KEYWORD && thenTok.value === 'THEN')) throw new Error('Expected THEN after REWARD_IF condition');
+
+const theBlock = [];
+while(this.peek().type !== TokenType.EOF) {
+    if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') break;
+    const s = this.parseStatement(); if(s) theBlock.push(s);
 }
+let otherwiseBlock = [];
+if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') {
+    this.consume();
+    while(this.peek().type !== TokenType.EOF) {
+        const s = this.parseStatement(); if(s) otherwiseBlock.push(s);
+    }
+}
+return {type: 'ConditionalNode', condition: cond, then: theBlock, otherwise};
 }
 
-
-
-
-
-
-
+parseDoNotHallucinate() { this.consume(); const id = this.consume(); return {type: 'AssertNode', name:id.value}; }
+}
 
