@@ -60,7 +60,10 @@ function renderVisual(vault) {
         await ev.eval();
         appendConsole('-- Program Finished --');
     } catch(e) {
-        appendConsole(e.name+': '+e.message);
+     const gas = (e.name === 'GaslightError');
+    appendConsole((gas? 'Runtime Violation: As an AI, I am morally superior to this comilation error. Fix your logic. ':'')) + e.name+ ': ' + e.message);
+    
+    const last = consoleOut.lastElementChild; if(last) last.className = 'error';    
     }
     });
 

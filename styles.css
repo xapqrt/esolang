@@ -13,3 +13,6 @@ body{background:linear-gradient(180deg,#05060a 0%,#0b0f12 100%);color:#e6eef8}
 .var-row{display:flex;justify-content:space-between;padding:6px;border-bottom:1px dashed rgba(255,255,255,0.02);color:var(--accent)}
 .console div{padding:4px 6px;border-radius:4px;margin:2px 0;background:rgba(255,255,255,0.02)}
 .toolbar button{background:transparent;border:1px solid rgba(0,255,209,0.12);color:var(--accent);padding:6px 10px;border-radius:6px}
+
+
+.console .error{background:linear-gradient(90deg,#3b0f0f,#220a0a);color:#ffb3b3;border:1px solid rgba(255,100,100,0.14)}
