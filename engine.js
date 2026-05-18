@@ -364,7 +364,7 @@ parseBinary(minPrec) {
      };
     while(true) {
         const t = this.peek();
-        if(t.type !== TokenType.OP && t.type !== TokenType.KEYWORD) break;
+        if(t.type !== TokenType.OP) break;
         const op = t.value;
         const prec = PRECEDENCE[op];
         if(prec === undefined || prec < minPrec) break;
