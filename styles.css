@@ -16,3 +16,9 @@ body{background:linear-gradient(180deg,#05060a 0%,#0b0f12 100%);color:#e6eef8}
 
 
 .console .error{background:linear-gradient(90deg,#3b0f0f,#220a0a);color:#ffb3b3;border:1px solid rgba(255,100,100,0.14)}
+
+.var-row.active{background:linear-gradient(90deg,rgba(0,255,150,0.03),rgba(0,255,150,0.01));outline:1px solid rgba(0,255,150,0.06)}
+.var-row b{color:var(--accent)}
+
+
+

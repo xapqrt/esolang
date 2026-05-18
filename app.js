@@ -20,6 +20,9 @@ function renderVisual(vault) {
         const kid = document.createElement('div');
         kid.className = 'var-row';
         kid.innerHTML = `<b>${k}</b>: <span>${String(v)}</span>`;
+       
+      if(v) kid.style.borderLeft = '4px solid rgba(0,255,150,0.14)'; else kid.style.borderLeft = '4px solid rgba(255,80,80,0.06)'; 
+       if(window._currentActiveNode && window._currentActiveNode.name === k) kid.classList.add('active')
         visualBrain.appendChild(kid);
     }
    }     
@@ -43,8 +46,9 @@ function renderVisual(vault) {
             const ev = new Evaluator(ast, {thinkStep: stepToggle.checked, thinkDelay:200, onOutput:(m)=>appendConsole(m), _abort: controller.abort, onStep: async (node)=>{
       
         appendConsole('> step: '+(node.type||'?'));
-                        renderVisual(ev.scope_stack ? ev.scope_stack[ev.scope_stack.length-1] : ev.variable_vault);
-                        if(controller.abort) throw new Error('Aborted');
+                       window._currentActiveNode = node;
+       renderVisual(ev.scope_stack ? ev.scope_stack[ev.scope_stack.length-1] : ev.variable_vault);
+        if(controller.abort) throw new Error('Aborted');
                         if(controller.stepMode){
                             await new Promise(res=> controller.stepResolve = res);
                             controller.stepResolve = null;
