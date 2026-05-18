@@ -142,14 +142,13 @@ async evalNode(node) {
         case 'ActAsNode':
 this._define('_role', node.name); break;
  case 'VariableDeclNode':
-
-if(node.value.type === 'Number') this._define(node.name, node.value.value);
-else if(node.value.type === 'String') this._define(node.name, node.value.value);
-else this._define(node.name, null);
+const v = this.evalExpression(node.value);
+this._define(node.name, v);
 break;
 case 'OutputNode':
 
-if(this.opts.onOutput) this.opts.onOutput(node.expr.value || '');
+const outv = this.evalExpression(node.expr);
+if(this.opts.onOutput) this.opts.onOutput(String(outv));
 break;
  case 'ConditionalNode':
 
@@ -196,6 +195,32 @@ _popScope() { this.scope_stack.pop(); }
     }
 
 
+Evaluator.prototype.evalExpression = function(expr) {
+ if(!expr) return undefined;
+ if(expr.type === 'LiteralNode') return expr.value;
+if(expr.type === 'IdentifierNode') return this._lookup(expr.name);
+if(expr.type === 'BinaryOpNode') {
+    const L = this.evalExpression(expr.left);
+    const R = this.evalExpression(expr.right);
+    switch(expr.operator) {
+        case '+': return L + R;
+        case '-': return L - R;
+        case '*': return L * R;
+        case '/': return L / R;
+        case '==': return L == R;
+        case '!=': return L != R;
+        case '<': return L < R;
+        case '>': return L > R;
+        case '<=': return L <= R;
+        case '>=': return L >= R;
+        case '&&': return L && R;
+        case '||': return L || R;
+    }
+}
+
+if(expr.value !== undefined) return expr.value;
+return undefined;
+}
 
 
 
@@ -205,7 +230,9 @@ _popScope() { this.scope_stack.pop(); }
 
 
 
-export async function runProgram(src, opts={}) {
+
+
+    export async function runProgram(src, opts={}) {
     const lex = new Lexer(src);
     const tokens = lex.tokenize();
     const p = new Parser(tokens);
