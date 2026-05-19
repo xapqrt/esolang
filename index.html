@@ -9,6 +9,17 @@
 <body>
   <div id="app" class="grid-root">
     <aside class="panel left"
+     <section class="tutorial" id="tutorialCard"></section>
+        <h2>Quick Start</h2>
+    <p>Write PROMPT like a weird little script. The editor now shows line numbers and readable code, and you can save snippets into workspace slots.</p>
+    <ul>
+       <li><b>Run</b>execute the current snippet</li>
+    <li><b>Ctrl+Enter</b> is the shortcut.</li>
+    <li><b>Save Snippet</b> stores a named workspace.</li>
+    <li><b>Samples</b> loads a ready-made example.</li>
+    </ul>
+    <span class="hint">Tip: start with <code>ACT_AS Demo</code> and then use <code>OUTPUT</code>.</span>
+    </section>
     <div class="toolbar">
       <button id="runBtn">Run</button>
       <button id="stepBtn">Step</button>
@@ -22,7 +33,8 @@
           <option value="demo1">Hello & math</option>
           <option value="demo2">Conditional & assert</option>
         </select>
-        <button id="clearConsoleBtn">Clear Console</button>
+      <button id="toggleTutorial">Hide Tutorial</button>
+      <button id="clearConsoleBtn">Clear</button>
       </div>
        <div class="editor-wrap">
        <input id="snippetName" placeholder="snippet name" style="min-width:120px;margin-left:8px" /> 

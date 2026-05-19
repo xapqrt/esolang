@@ -14,6 +14,8 @@ const deleteSnippet = document.getElementById('deleteSnippet');
 const highlighter = document.getElementById('highlighter');
 const gutter = document.getElementById('gutter');
 const clearConsoleBtn = document.getElementById('clearConsoleBtn');
+const tutorialCard = document.getElementById('tutorialCard');
+const toggleTutorial = document.getElementById('toggleTutorial');
 const editor = document.getElementById('editor');
 const consoleOut = document.getElementById('consoleOut');
 const visualBrain = document.getElementById('visualBrain');
@@ -52,6 +54,11 @@ function renderVisual(vault) {
    });
    
    clearConsoleBtn.addEventListener('click', ()=>{ consoleOut.innerHTML = ''; appendConsole('-- console cleared --'); });
+   toggleTutorial.addEventListener('click', ()=>{ 
+   const hidden = tutorialCard.style.display === 'none';
+   toggleTutorial.textContent = hidden ? 'Hide Tutorial' : 'Show Tutorial';
+   tutorialCard.style.display = hidden ? '' : 'none';
+   });
    
    runBtn.addEventListener('click', async ()=>{
     consoleOut.innerHTML = '';
