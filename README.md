@@ -1,45 +1,30 @@
-# Esolanh - An Esoteric Programming Language IDE
+# Esolang
 
-A web-based interpreter and IDE for **Esolanh**, an experimental esoteric programming language designed with a focus on explicit control flow, conditional logic, and AI-inspired directives.
+A tiny programming language with AI flavoured keywords, running entirely in the browser.
 
-## Overview
+No build step, no npm install, no server. Just open the html and write nonsense.
 
-Esolanh is a complete reimplementation of an esoteric language, built from scratch with a modern web-based interactive development environment. It features a custom lexer, parser, and evaluator that brings an unusual syntax to life with real-time debugging and visualization capabilities.
+ Features
+Real lexer, parser and evaluator: Hand written tokeniser with proper multi character operators, a recursive descent parser with operator precedence, and an evaluator that runs the tree it produces.
 
-## Features
+If and else: REWARD_IF and PENALIZE are an if and an else. Blocks are indented and end when the next line dedents, same as Python.
 
-- **Interactive Web IDE** - Write and execute Esolanh programs directly in your browser
-- **Step-by-Step Debugging** - Execute code line-by-line with the `THINK_STEP_BY_STEP` mode
-- **Real-Time Variable Visualization** - Watch variables change as your code executes
-- **Snippet Management** - Save and load code snippets to localStorage
-- **Sample Programs** - Get started quickly with built-in examples
-- **Execution Controls** - Run, pause, step, and reset your programs
-- **Console Output** - See program output and runtime errors in real-time
+Runtime checks: DO_NOT_HALLUCINATE throws if a variable turns out to be empty. Which is a joke, but it also stops you shipping undefined behaviour.
 
-## Language Syntax
+Step through debugging: Hit Step and walk the program one node at a time. Pause freezes it between steps, Reset kills a run that is stuck in a loop.
 
-### Core Keywords
+Live variables: Every assignment updates the variable panel as it happens.
 
-- **`ACT_AS <name>`** - Define the behavior context of your program
-- **`TAKE_INPUT <var> = <value>`** - Declare and initialize variables
-- **`OUTPUT <expression>`** - Print values to console
-- **`REWARD_IF <condition> THEN`** - Conditional execution block
-- **`PENALIZE`** - Else/alternative execution path
-- **`DO_NOT_HALLUCINATE <var>`** - Restrict variable mutation
-- **`THINK_STEP_BY_STEP`** - Enable verbose step-by-step execution mode
+Editor with line numbers: Line numbers in the gutter and real syntax highlighting for keywords, strings and numbers.
 
-### Example Programs
+Saved snippets: Name a program and it sticks around in localStorage. Save and Load buttons handle the whole buffer in one go.
 
-**Basic Demo:**
-```
-ACT_AS Demo
-TAKE_INPUT a = 5
-TAKE_INPUT b = 7
-OUTPUT "sum is:"
-OUTPUT a + b
-```
+ Samples
+Three samples ship in the dropdown and they all actually run.
 
-**Conditional Logic:**
+ The Language
+Blocks after REWARD_IF and PENALIZE are indented two spaces or a tab. Anything at the same indent as the REWARD_IF ends the block.
+
 ```
 ACT_AS Checker
 TAKE_INPUT x = 0
@@ -50,49 +35,54 @@ PENALIZE
 DO_NOT_HALLUCINATE x
 ```
 
-## Getting Started
+ Keywords
+ACT_AS name sets the role your program is pretending to be. Cosmetic, but the evaluator keeps track of it.
 
-1. Open `index.html` in a web browser
-2. Choose a sample from the **Samples** dropdown or write your own code
-3. Click **Run** to execute (or press Ctrl+Enter)
-4. Use **Step** and **Pause** for manual execution control
-5. Toggle **THINK_STEP_BY_STEP** to see detailed execution steps
+TAKE_INPUT name = expression declares a variable.
 
-### Saving Your Work
+OUTPUT expression prints something. Expressions work too, so OUTPUT a + b is fine.
 
-- Click **Save** to store your code to browser localStorage
-- Click **Load** to retrieve your last saved snippet
-- Use **Save Snippet** with a name to create named workspaces
-- Select saved snippets from the **workspace** dropdown
+REWARD_IF expression THEN starts a conditional. PENALIZE on its own line starts the else branch.
 
-## Project Structure
+DO_NOT_HALLUCINATE expression throws a GaslightError if the value is empty, undefined or an empty string.
 
-- `index.html` - Main IDE interface
-- `app.js` - UI controller and event handlers
-- `engine.js` - Lexer, Parser, and Evaluator implementations
-- `styles.css` - IDE styling
+THINK_STEP_BY_STEP turns on a pause between every step. The Slow Steps checkbox in the toolbar does the same thing without editing the source.
 
-## Technical Details
+ Operators
+Math: + - * /
 
-### Engine Architecture
+Compare: == != < > <= >=
 
-1. **Lexer** - Tokenizes source code into meaningful tokens
-2. **Parser** - Builds an Abstract Syntax Tree (AST) from tokens
-3. **Evaluator** - Executes the AST with full scope management
+Logic: && ||
 
-### Supported Operations
+Unary minus works too, so OUTPUT -3 is legal.
 
-- Arithmetic: `+`, `-`, `*`, `/`
-- Comparison: `==`, `!=`, `<=`, `>=`
-- Logical: `&&`, `||`
-- String and numeric literals
-- Variable assignment and access
+Groups: parentheses, so OUTPUT (a + b) * 2 is fine.
 
-## Browser Requirements
+Strings use double quotes and understand \\n, \\t and \\" escapes.
 
-- Modern browser with ES6 module support
-- localStorage for snippet persistence
+ How To Use
+1. Open index.html in a browser
+2. Pick a sample from the dropdown or write something
+3. Hit Run, or Ctrl+Enter
+4. Step walks it node by node, Pause holds it, Reset stops it
+5. Slow Steps slows every node down so you can watch the variables move
+6. Name a program in the snippet bar and Save to keep it in the browser
 
----
+ Files
+index.html - the IDE shell
 
-Built with ❤️ for esolang enthusiasts.
+app.js - dom wiring, editor, snippets, stepping
+
+engine.js - lexer, parser, evaluator
+
+styles.css - the dracula-ish theme
+
+ Notes
+Variables declared inside a REWARD_IF or PENALIZE block go out of scope when the block ends. Declare them before the conditional if you need them afterwards.
+
+There are no loops yet. That is why Reset exists.
+
+Errors print into the console with the line number, and the status badge tells you whether it was a ParseError or a GaslightError.
+
+This is a toy. It will happily divide by zero and complain about it afterwards.

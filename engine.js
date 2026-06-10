@@ -1,7 +1,4 @@
-
-export const VERSION = '0.1.0';
-console.log(`engine bootstrap`, VERSION);
-
+export const VERSION = '0.2.0';
 
 export const TokenType = {
     KEYWORD: 'KEYWORD',
@@ -10,382 +7,467 @@ export const TokenType = {
     STRING: 'STRING',
     OP: 'OP',
     NEWLINE: 'NEWLINE',
-    EOF: 'EOF',
+    EOF: 'EOF'
 };
 
-
-export const kw = {
-    ACT_AS: 'ACT_AS',
-    THINK: 'THINK_STEP_BY_STEP',
-    TAKE_INPUT: 'TAKE_INPUT',
-    DO_NOT_HALLUCINATE: 'DO_NOT_HALLUCINATE',
-    REWARD_IF: 'REWARD_IF',
-    THEN: 'THEN',
-   PENALIZE: 'PENALIZE',
-    OUTPUT: 'OUTPUT',
-};
-
-
-const KEYWORDS = new Map([
-['ACT_AS', TokenType.KEYWORD],
-['THINK_STEP_BY_STEP', TokenType.KEYWORD],
-['TAKE_INPUT', TokenType.KEYWORD],
-['DO_NOT_HALLUCINATE', TokenType.KEYWORD],
-['REWARD_IF', TokenType.KEYWORD],
-['THEN', TokenType.KEYWORD],
-['PENALIZE', TokenType.KEYWORD],
-['OUTPUT', TokenType.KEYWORD],
+export const KEYWORDS = new Map([
+    ['ACT_AS', TokenType.KEYWORD],
+    ['THINK_STEP_BY_STEP', TokenType.KEYWORD],
+    ['TAKE_INPUT', TokenType.KEYWORD],
+    ['DO_NOT_HALLUCINATE', TokenType.KEYWORD],
+    ['REWARD_IF', TokenType.KEYWORD],
+    ['THEN', TokenType.KEYWORD],
+    ['PENALIZE', TokenType.KEYWORD],
+    ['OUTPUT', TokenType.KEYWORD]
 ]);
+
+// keywords that start a statement and carry the rest of the line
+const STATEMENT_KEYWORDS = new Set([
+    'ACT_AS', 'THINK_STEP_BY_STEP', 'TAKE_INPUT', 'DO_NOT_HALLUCINATE',
+    'REWARD_IF', 'THEN', 'PENALIZE', 'OUTPUT'
+]);
+
+const TWO_CHAR_OPS = new Set(['==', '!=', '<=', '>=', '&&', '||']);
+
+const PRECEDENCE = {
+    '||': 1, '&&': 2,
+    '==': 3, '!=': 3,
+    '<': 4, '>': 4, '<=': 4, '>=': 4,
+    '+': 5, '-': 5,
+    '*': 6, '/': 6
+};
+
+export class ParseError extends Error {
+    constructor(msg, line) {
+        super(line ? `line ${line}: ${msg}` : msg);
+        this.name = 'ParseError';
+        this.line = line;
+    }
+}
+
+export class GaslightError extends Error {
+    constructor(msg) {
+        super(msg);
+        this.name = 'GaslightError';
+    }
+}
 
 export class Lexer {
     constructor(src) {
         this.src = src || '';
-        this.current_idx = 0;
-        this.ch = this.src[0] || '';
-        this.token_stream = [];
+        this.idx = 0;
+        this.line = 1;
+        this.col = 0;
+        this.tokens = [];
     }
 
-  nextChar() {
-       this.current_idx++;
-         this.ch = this.src[this.current_idx] || '';
-         return this.ch;
-  }
+    get ch() { return this.src[this.idx] || ''; }
+    get peek() { return this.src[this.idx + 1] || ''; }
 
-  peek() { return this.src[this.current_idx+1] || ''; }
+    advance() {
+        const cur = this.ch;
+        if (cur === '\n') { this.line += 1; this.col = 0; }
+        else this.col += 1;
+        this.idx += 1;
+        return cur;
+    }
 
-isWhitespace(c){ return c === ' ' || c === '\t' || c === '\r'; }
-isNewline(c){ return c === '\n'; }
-isDigit(c){ return /[0-9]/.test(c); }
-isIdentStart(c){ return /[a-zA-Z_]/.test(c); }
+    readWhile(pred) {
+        let out = '';
+        while (this.ch && pred(this.ch)) out += this.advance();
+        return out;
+    }
 
-readWhile(pred){let s=''; while(this.ch && pred(this.ch)){ s+=this.ch; this.nextChar(); } return s; }
+    readNumber() {
+        const whole = this.readWhile(c => /[0-9]/.test(c));
+        let frac = '';
+        if (this.ch === '.' && /[0-9]/.test(this.peek)) {
+            frac = '.' + this.readWhile(c => /[0-9]/.test(c));
+        }
+        return { type: TokenType.NUMBER, value: Number(whole + frac), line: this.line };
+    }
 
-readNumber() { let num = this.readWhile(c=>this.isDigit(c)); return {type: TokenType.NUMBER, value: Number(num)}; }
+    readIdent() {
+        const name = this.readWhile(c => /[a-zA-Z0-9_]/.test(c));
+        const type = KEYWORDS.has(name) ? TokenType.KEYWORD : TokenType.IDENT;
+        return { type, value: name, line: this.line };
+    }
 
-readIdentifier() { let id = this.readWhile(c=>this.isIdentStart(c) || /[0-9]/.test(c));
-    if(KEYWORDS.has(id)) return {type: TokenType.KEYWORD, value: id};
-    return {type: TokenType.IDENT, value: id};
-}
-
-readString() {
-      this.nextChar();
-        let s = '';
-        while(this.ch && this.ch !== '"') {
-            if(this.ch === '\\' && this.peek() === '"') {
-      this.nextChar(); s +=this.ch; this.nextChar(); continue;
+    readString() {
+        this.advance(); // opening quote
+        let out = '';
+        while (this.ch && this.ch !== '"') {
+            if (this.ch === '\\') {
+                const esc = this.peek;
+                if (esc === 'n') { out += '\n'; this.advance(); }
+                else if (esc === 't') { out += '\t'; this.advance(); }
+                else if (esc === '"') { out += '"'; this.advance(); }
+                else out += this.ch;
+            } else {
+                out += this.ch;
             }
-            s += this.ch; this.nextChar();
+            this.advance();
         }
-this.nextChar();
-        return {type: TokenType.STRING, value: s};
+        if (this.ch !== '"') throw new ParseError('string never closed', this.line);
+        this.advance();
+        return { type: TokenType.STRING, value: out, line: this.line };
     }
 
-tokenize() {
-    while(this.ch) {
-        if(this.isWhitespace(this.ch)) { this.nextChar(); continue; }
-        if(this.isNewline(this.ch)) { this.token_stream.push({type: TokenType.NEWLINE}); this.nextChar(); continue; }
-        if(this.ch === '"') { this.token_stream.push(this.readString()); continue; }
-        if(this.isDigit(this.ch)) { this.token_stream.push(this.readNumber()); continue; }
-        if(this.isIdentStart(this.ch)){
-           const tok = this.readIdentifier();
-              this.token_stream.push(tok);
-        console.log('Token current loop:', tok);
-              continue;
-        }
+    tokenize() {
+        while (this.ch) {
+            const col = this.col;
 
- 
- const two = this.ch + this.peek();
- if(['==','!=','<=','>=','&&','||'].includes(two)){
- this.token_stream.push({type: TokenType.OP, value: two});
- this.nextChar(); this.nextChar();
- continue;
- }
-        this.token_stream.push({type: TokenType.OP, value: this.ch});
- this.nextChar();
-    }
-this.token_stream.push({type: TokenType.EOF});
-    return this.token_stream;
-}
-}
+            if (this.ch === '\n') {
+                this.tokens.push({ type: TokenType.NEWLINE, line: this.line, col });
+                this.advance();
+                continue;
+            }
+            if (this.ch === ' ' || this.ch === '\t' || this.ch === '\r') { this.advance(); continue; }
+            if (this.ch === '"') { this.tokens.push({ ...this.readString(), col }); continue; }
+            if (/[0-9]/.test(this.ch)) { this.tokens.push({ ...this.readNumber(), col }); continue; }
+            if (/[a-zA-Z_]/.test(this.ch)) { this.tokens.push({ ...this.readIdent(), col }); continue; }
 
-
-
-
-
-
-
-
-
-
-
-export class GaslightError extends Error {
-    constructor(msg){
-        super(msg);
-        this.name = 'GaslightError';
-    }
-
-
-    export class Evaluator {
-        constructor(ast, opts={}) {
-            this.ast = ast;
-            this.variable_vault = Object.create(null);
-            this.opts = opts;
+            const pair = this.ch + this.peek;
+            if (TWO_CHAR_OPS.has(pair)) {
+                this.tokens.push({ type: TokenType.OP, value: pair, line: this.line, col });
+                this.advance();
+                this.advance();
+                continue;
+            }
+            this.tokens.push({ type: TokenType.OP, value: this.ch, line: this.line, col });
+            this.advance();
         }
 
-  async eval() {
-
-    this.scope_stack = [Object.create(null)];
-      for(const node of this.ast) {
-      if(this.opts && this.opts._abort) { console.log('evaluation aborted'); break; }
-        console.log('Evaluating node:', node);
-        await this.evalNode(node);
-    if(this.opts && this.opts._abort) { console.log('evaluation aborted'); break; }
-    }
-    }
-
-async evalNode(node) {
-    if(!node) return;
-    switch(node.type) {
-        case 'ActAsNode':
-this._define('_role', node.name); break;
- case 'VariableDeclNode':
-const v = this.evalExpression(node.value);
-this._define(node.name, v);
-break;
-case 'OutputNode':
-
-const outv = this.evalExpression(node.expr);
-if(this.opts.onOutput) this.opts.onOutput(String(outv));
-break;
- case 'ConditionalNode':
-
-const condVal =!!this.evalExpression(node.condition);
-if(condVal){
-    this.pushScope();
-    for(const n of node.then) await this.evalNode(n);
-    this.popScope();
-} else {
-    this.pushScope();
-    for(const n of node.otherwise) await this.evalNode(n);
-    this.popScope();
-}
-break;
-case 'AssertNode':
-
-const aval = this.evalExpression(node.expr);
-if(aval === null || aval === undefined){
-    throw new GaslightError(`Variable or expression is invalid in DO_NOT_HALLUCINATE`);
-}
-break;
-default:
-    console.log('Unknown node type:', node.type);
-    }
-
-if(this.opts.onStep) await this.opts.onStep(node);
-
-    if(this.opts.thinkSteps) await new Promise(r, this.opts.thinkDelay ||200);
-}
-
-assertNoHallucinate(id) {
- const v = this.variable_vault[id];
-  if(v === null || v === undefined) throw new GaslightError(`Runtime Violation: As a AI, I am morrally superior to this compilation error. Fix your logic.Variable ${id} is invalid.`);
-}
-
-_define(name, val){ this.scope_stack[this.scope_stack.length-1][name] = val; console.log('Define',name,val); }
-_lookup(name) {
-for(let i=this.scope_stack.length-1; i>=0; i--){ if(name in this.scope_stack[i]) return this.scope_stack[i][name] }
- return undefined;
-}
-_pushScope() { this.scope_stack.push(Object.create(null)); }
-_popScope() { this.scope_stack.pop(); }
-    }
-
-
-Evaluator.prototype.evalExpression = function(expr) {
- if(!expr) return undefined;
- if(expr.type === 'LiteralNode') return expr.value;
-if(expr.type === 'IdentifierNode') return this._lookup(expr.name);
-if(expr.type === 'BinaryOpNode') {
-    const L = this.evalExpression(expr.left);
-    const R = this.evalExpression(expr.right);
-    switch(expr.operator) {
-        case '+': return L + R;
-        case '-': return L - R;
-        case '*': return L * R;
-        case '/': return L / R;
-        case '==': return L == R;
-        case '!=': return L != R;
-        case '<': return L < R;
-        case '>': return L > R;
-        case '<=': return L <= R;
-        case '>=': return L >= R;
-        case '&&': return L && R;
-        case '||': return L || R;
+        this.tokens.push({ type: TokenType.EOF, line: this.line, col: 0 });
+        return this.tokens;
     }
 }
-
-if(expr.value !== undefined) return expr.value;
-return undefined;
-}
-
-
-
-
-
-
-
-
-
-
-
-    export async function runProgram(src, opts={}) {
-    const lex = new Lexer(src);
-    const tokens = lex.tokenize();
-    const p = new Parser(tokens);
-    const ast = p.parseProgram();
-    const ev = new Evaluator(ast, opts);
-    await ev.eval();
-    return ev.eval();
-}
-
-console.log('engine ready - proceed to hallucinate responsibly');
-
-
-console.log('lexer tokenizer is handling spaces horribly but fixed');
-
-
-console.log('ast parser can handle act_)as nodes now');
-
-
-console.log('gaslighting error engine working perfectly lol');
-
-
-console.log('the evaluation loop id hallucinating scope ranges');
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export class Parser {
     constructor(tokens) {
         this.tokens = tokens || [];
-        this.current_idx = 0;
+        this.idx = 0;
     }
 
-peek() { return this.tokens[this.current_idx] || {type: TokenType.EOF}; }
-consume() { const t = this.peek(); this.current_idx++; return t; }
-
- parseProgram() {
-    const nodes = [];
-    while(this.peek().type !== TokenType.EOF) {
-  const st = this.parseStatement();
-if(st) body.push(st);
-else continue;
+    peek(offset = 0) {
+        return this.tokens[this.idx + offset] || { type: TokenType.EOF, line: 0 };
     }
-const ast_root = {type: 'ProgramNode', body};
-console.log('AST Root genrated successfully:', ast_root);
- return ast_root;
- }
 
-parseStatement() {
-    const t = this.peek();
-    if(t.type === TokenType.KEYWORD) {
- if(t.value === 'ACT_AS'){this.consume(); const id = this.consume(); return {type: 'ActAsNode', name: id.value} }
- if(t.value === 'TAKE_INPUT'){ return this.parseTakeInput() }
- if(t.value === 'OUTPUT'){ return this.parseOutput() }
- if(t.value === 'REWARD_IF'){ return this.parseConditional() }
-if(t.value === 'DO_NOT_HALLUCINATE'){ return this.parseDoNotHallucinate() }
-}
-
-if(t.type === 'NEWLINE') { this.consume(); return null; }
-
-this.consume();
-return null;
-}
-
-parseTakeInput() { this.consume();
-const id = this.consume();
-if(id.type !== TokenType.IDENT) throw new Error('Expected identifier after TAKE_INPUT');
-const eq = this.consume();
-const expr = this.parseExpression();
-return {type: 'VariableDeclNode', name: id.value, value: expr};
-}
-
-parseOutput() { this.consume(); const expr = this.parseExpression(); return {type: 'OutputNode', expr}; }
-
-parseConditional() {
-
-this.consume();
-
-const cond = this.parseExpression();
-
-const thenTok = this.consume();
-if(!(thenTok.type === TokenType.KEYWORD && thenTok.value === 'THEN')) throw new Error('Expected THEN after REWARD_IF condition');
-
-const theBlock = [];
-while(this.peek().type !== TokenType.EOF) {
-    if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') break;
-    const s = this.parseStatement(); if(s) theBlock.push(s);
-}
-let otherwiseBlock = [];
-if(this.peek().type === TokenType.KEYWORD && this.peek().value === 'PENALIZE') {
-    this.consume();
-    while(this.peek().type !== TokenType.EOF) {
-       
-       if(this.peek().type === TokenType.KEYWORD && ['ACT_AS','TAKE_INPUT','OUTPUT','REWARD_IF','DO_NOT_HALLUCINATE'].includes(this.peek().value)) break;
-        const s = this.parseStatement(); if(s) otherwiseBlock.push(s); else continue;
+    next() {
+        const tok = this.peek();
+        this.idx += 1;
+        return tok;
     }
-}
-return {type: 'ConditionalNode', condition: cond, then: theBlock, otherwise};
-}
 
-parseDoNotHallucinate() { this.consume(); const expr = this.parseExpression(); return {type: 'AssertNode', expr: expr } }
-
-
-parseExpression() {
-   return this.parseBinary(0);
-}
-
-parsePrimary() {
-  const t = this.peek();
-if(t.type === TokenType.NUMBER){ this.consume(); return {type:'LiteralNode', value:t.value} }
-if(t.type === TokenType.STRING){ this.consume(); return {type:'LiteralNode', value:t.value} }
-if(t.type === TokenType.IDENT){ this.consume(); return {type:'IdentifierNode', name:t.value} }
-if(t.type === TokenType.OP && t.value === '('){ this.consume(); const e = this.parseExpression(); const c = this.consume(); return e }
-
-return this.consume();
-}
-
-parseBinary(minPrec) {
-    let left = this.parsePrimary();
-     const PRECEDENCE = {
-        '||':1,'&&':2,'==':3,'!=':3,'<':4,'>':4,'<=':4,'>=':4,'+':5,'-':5,'*':6,'/':6
-     };
-    while(true) {
+    atKeyword(name) {
         const t = this.peek();
-        if(t.type !== TokenType.OP) break;
-        const op = t.value;
-        const prec = PRECEDENCE[op];
-        if(prec === undefined || prec < minPrec) break;
-        this.consume();
-        let right = this.parseBinary(prec + 1);
-        left = {type: 'BinaryOpNode', operator: op, left, right};
+        return t.type === TokenType.KEYWORD && t.value === name;
     }
-    return left;
+
+    eatNewlines() {
+        while (this.peek().type === TokenType.NEWLINE) this.next();
+    }
+
+    parseProgram() {
+        const nodes = [];
+        this.eatNewlines();
+        while (this.peek().type !== TokenType.EOF) {
+            const before = this.idx;
+            const node = this.parseStatement();
+            if (node) nodes.push(node);
+            this.eatNewlines();
+            // never loop forever on a token we cannot make sense of
+            if (this.idx === before) this.next();
+        }
+        return nodes;
+    }
+
+    parseStatement() {
+        const tok = this.peek();
+
+        if (tok.type === TokenType.NEWLINE) { this.next(); return null; }
+
+        if (tok.type === TokenType.KEYWORD && STATEMENT_KEYWORDS.has(tok.value)) {
+            switch (tok.value) {
+                case 'ACT_AS': return this.parseActAs();
+                case 'THINK_STEP_BY_STEP': return this.parseThink();
+                case 'TAKE_INPUT': return this.parseTakeInput();
+                case 'OUTPUT': return this.parseOutput();
+                case 'REWARD_IF': return this.parseConditional();
+                case 'DO_NOT_HALLUCINATE': return this.parseDoNotHallucinate();
+            }
+        }
+
+        throw new ParseError(`dont know what to do with "${tok.value ?? tok.type}"`, tok.line);
+    }
+
+    parseActAs() {
+        this.next();
+        const name = this.next();
+        if (name.type !== TokenType.IDENT) throw new ParseError('ACT_AS needs a name', name.line);
+        return { type: 'ActAsNode', name: name.value };
+    }
+
+    parseThink() {
+        this.next();
+        return { type: 'ThinkNode' };
+    }
+
+    parseTakeInput() {
+        this.next();
+        const name = this.next();
+        if (name.type !== TokenType.IDENT) throw new ParseError('TAKE_INPUT needs a variable name', name.line);
+        const eq = this.next();
+        if (!(eq.type === TokenType.OP && eq.value === '=')) throw new ParseError('expected = after the variable name', eq.line);
+        return { type: 'VariableDeclNode', name: name.value, value: this.parseExpression() };
+    }
+
+    parseOutput() {
+        this.next();
+        return { type: 'OutputNode', expr: this.parseExpression() };
+    }
+
+    parseDoNotHallucinate() {
+        this.next();
+        return { type: 'AssertNode', expr: this.parseExpression() };
+    }
+
+    parseConditional() {
+        // blocks end when a line dedents back out to the REWARD_IF indent
+        const base = this.peek().col;
+        this.next();
+        const condition = this.parseExpression();
+
+        if (!this.atKeyword('THEN')) throw new ParseError('REWARD_IF needs THEN at the end of the line', this.peek().line);
+        this.next();
+        this.eatNewlines();
+
+        const then_block = this.parseBlock(base, ['PENALIZE']);
+
+        let otherwise_block = [];
+        if (this.atKeyword('PENALIZE')) {
+            this.next();
+            this.eatNewlines();
+            otherwise_block = this.parseBlock(base, []);
+        }
+
+        return { type: 'ConditionalNode', condition, then: then_block, otherwise: otherwise_block };
+    }
+
+    parseBlock(base_indent, stoppers) {
+        const block = [];
+        while (this.peek().type !== TokenType.EOF) {
+            const tok = this.peek();
+            if (tok.type === TokenType.NEWLINE) { this.next(); continue; }
+            if (tok.col <= base_indent) break;
+            if (tok.type === TokenType.KEYWORD && stoppers.includes(tok.value)) break;
+            block.push(this.parseStatement());
+            this.eatNewlines();
+        }
+        return block;
+    }
+
+    parseExpression() {
+        return this.parseBinary(0);
+    }
+
+    parsePrimary() {
+        const tok = this.peek();
+
+        if (tok.type === TokenType.NUMBER || tok.type === TokenType.STRING) {
+            this.next();
+            return { type: 'LiteralNode', value: tok.value };
+        }
+        if (tok.type === TokenType.IDENT) {
+            this.next();
+            return { type: 'IdentifierNode', name: tok.value };
+        }
+        if (tok.type === TokenType.OP && tok.value === '(') {
+            this.next();
+            const inner = this.parseExpression();
+            const close = this.next();
+            if (!(close.type === TokenType.OP && close.value === ')')) throw new ParseError('missing )', close.line);
+            return inner;
+        }
+        if (tok.type === TokenType.OP && tok.value === '-') {
+            this.next();
+            return { type: 'NegateNode', operand: this.parsePrimary() };
+        }
+
+        throw new ParseError(`cant use "${tok.value ?? tok.type}" in an expression`, tok.line);
+    }
+
+    parseBinary(min_prec) {
+        let left = this.parsePrimary();
+
+        while (this.peek().type === TokenType.OP) {
+            const op = this.peek().value;
+            const prec = PRECEDENCE[op];
+            if (prec === undefined || prec < min_prec) break;
+            this.next();
+            const right = this.parseBinary(prec + 1);
+            left = { type: 'BinaryOpNode', operator: op, left, right };
+        }
+        return left;
+    }
 }
+
+export class Evaluator {
+    constructor(ast, opts = {}) {
+        this.ast = ast || [];
+        this.opts = opts;
+        this.scopes = [Object.create(null)];
+        this.role = null;
+        this.thinking = false;
+        this.steps = 0;
+    }
+
+    get aborted() {
+        return this.opts.aborted ? this.opts.aborted() === true : false;
+    }
+
+    lookup(name) {
+        for (let i = this.scopes.length - 1; i >= 0; i--) {
+            if (name in this.scopes[i]) return this.scopes[i][name];
+        }
+        return undefined;
+    }
+
+    define(name, value) {
+        this.scopes[this.scopes.length - 1][name] = value;
+    }
+
+    async run() {
+        this.scopes = [Object.create(null)];
+        this.role = null;
+        this.thinking = false;
+        this.steps = 0;
+
+        for (const node of this.ast) {
+            if (this.aborted) break;
+            await this.exec(node);
+        }
+        return this;
+    }
+
+    async execBlock(nodes) {
+        for (const node of nodes) {
+            if (this.aborted) return;
+            await this.exec(node);
+        }
+    }
+
+    async exec(node) {
+        if (!node) return;
+
+        switch (node.type) {
+            case 'ActAsNode':
+                this.role = node.name;
+                break;
+
+            case 'ThinkNode':
+                this.thinking = true;
+                if (this.opts.onThink) this.opts.onThink(node);
+                break;
+
+            case 'VariableDeclNode':
+                this.define(node.name, this.value(node.value));
+                break;
+
+            case 'OutputNode': {
+                const out = this.value(node.expr);
+                if (this.opts.onOutput) this.opts.onOutput(typeof out === 'string' ? out : String(out));
+                break;
+            }
+
+            case 'ConditionalNode': {
+                const cond = Boolean(this.value(node.condition));
+                this.scopes.push(Object.create(null));
+                try {
+                    await this.execBlock(cond ? node.then : node.otherwise);
+                } finally {
+                    this.scopes.pop();
+                }
+                break;
+            }
+
+            case 'AssertNode': {
+                const got = this.value(node.expr);
+                if (got === null || got === undefined || got === '') {
+                    throw new GaslightError(
+                        `DO_NOT_HALLUCINATE caught an empty value. "${describe(node.expr)}" is not a thing here.`
+                    );
+                }
+                break;
+            }
+
+            default:
+                throw new Error(`evaluator does not know node type ${node.type}`);
+        }
+
+        this.steps += 1;
+
+        if (this.opts.onStep) await this.opts.onStep(node, this);
+        if (this.thinking && this.opts.thinkDelay) await new Promise(r => setTimeout(r, this.opts.thinkDelay));
+    }
+
+    value(expr) {
+        if (!expr) return undefined;
+
+        switch (expr.type) {
+            case 'LiteralNode':
+                return expr.value;
+            case 'IdentifierNode':
+                return this.lookup(expr.name);
+            case 'NegateNode':
+                return -Number(this.value(expr.operand));
+            case 'BinaryOpNode':
+                return this.binary(expr);
+        }
+        return undefined;
+    }
+
+    binary(expr) {
+        const l = this.value(expr.left);
+        const r = this.value(expr.right);
+
+        switch (expr.operator) {
+            case '+': return num(l) + num(r);
+            case '-': return num(l) - num(r);
+            case '*': return num(l) * num(r);
+            case '/':
+                if (Number(r) === 0) throw new GaslightError('divided by zero, the model blinked');
+                return num(l) / num(r);
+            case '==': return l == r;
+            case '!=': return l != r;
+            case '<': return num(l) < num(r);
+            case '>': return num(l) > num(r);
+            case '<=': return num(l) <= num(r);
+            case '>=': return num(l) >= num(r);
+            // logical ops hand back an operand rather than a bool, same as js,
+            // so OUTPUT a || "fallback" does something useful
+            case '&&': return l ? r : l;
+            case '||': return l ? l : r;
+        }
+        throw new Error(`no handler for operator ${expr.operator}`);
+    }
 }
 
-console.log('parser: TAKE_INPUT and DO_NOT_HALLUCINATE nodes supported - somewhat');
+function num(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    const n = Number(v);
+    return Number.isNaN(n) ? 0 : n;
+}
 
+function describe(expr) {
+    if (!expr) return 'that';
+    if (expr.type === 'IdentifierNode') return expr.name;
+    if (expr.type === 'LiteralNode') return JSON.stringify(expr.value);
+    return 'that expression';
+}
 
-
+export function runProgram(src, opts = {}) {
+    const tokens = new Lexer(src).tokenize();
+    const ast = new Parser(tokens).parseProgram();
+    return new Evaluator(ast, opts).run();
+}
